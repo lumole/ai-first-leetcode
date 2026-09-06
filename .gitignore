@@ -1,0 +1,13 @@
+.DS_Store
+.idea/
+.vscode/
+.run/
+__pycache__/
+dist/
+node_modules/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.venv/
+venv/
