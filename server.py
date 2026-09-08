@@ -82,8 +82,8 @@ VISIBLE_EXAMPLES: dict[str, tuple[Example, Example, Example]] = {
     ),
     "attention.sdpa": (
         ("q, k, v.shape = (2, 4, 5, 8), mask = None", "out.shape = (2, 4, 5, 8)\nattn.shape = (2, 4, 5, 5)", "每个 Query 对 5 个 Key 产生一组权重，再加权聚合 Value。"),
-        ("q, k.shape = (1, 2, 3, 4)\nv.shape = (1, 2, 3, 6)", "out.shape = (1, 2, 3, 6)\nattn.shape = (1, 2, 3, 3)", "输出最后一维跟随 Value，权重矩阵由 Query 和 Key 的序列长度决定。"),
-        ("q, k, v.shape = (1, 1, 3, 4)\nmask 屏蔽最后一个 Key", "attn[..., 2] = 0", "被 mask 的位置在 Softmax 后权重必须为 0。"),
+        ("q, k.shape = (1, 2, 3, 4)\nv.shape = (1, 2, 3, 6)", "返回 (out, attn)：\nout.shape = (1, 2, 3, 6)\nattn.shape = (1, 2, 3, 3)", "函数返回两个 Tensor：`out` 聚合 Value，所以最后一维是 `value_dim=6`；`attn` 保存每个 Query 对 3 个 Key 的概率权重。"),
+        ("q, k, v.shape = (1, 1, 3, 4)\nmask.shape = (1, 1, 3, 3), dtype = torch.bool\nmask[..., 2] = False", "(out, attn)\nout.shape = (1, 1, 3, 4)\nattn[..., 2] = [[[0., 0., 0.]]]", "输出是二元组 `(out, attn)`，不是单个 Tensor。mask 是布尔 Tensor：`True` 表示允许关注，`False` 表示屏蔽；被屏蔽的位置在 Softmax 前填入负无穷，因此返回的 `attn` 权重为 0。"),
     ),
     "attention.causal_mask": (
         ("seq_len = 1", "[[True]]", "单个 token 只能看到自己。"),
@@ -617,7 +617,24 @@ def format_judge_value(value: Any) -> str:
             return repr(value.item())
     except Exception:
         pass
+    if isinstance(value, tuple):
+        return "(" + ", ".join(format_judge_value(item) for item in value) + ("," if len(value) == 1 else "") + ")"
+    if isinstance(value, list):
+        return "[" + ", ".join(format_judge_value(item) for item in value) + "]"
+    if isinstance(value, dict):
+        return "{" + ", ".join(f"{key!r}: {format_judge_value(item)}" for key, item in value.items()) + "}"
     return repr(value)
+
+
+def assert_sdpa_pair(actual: Any, expected: Any) -> tuple[Any, Any]:
+    actual_output, actual_attn = actual
+    expected_output, expected_attn = expected
+    try:
+        assert_close(actual_output, expected_output)
+        assert_close(actual_attn, expected_attn)
+    except OutputMismatch as exc:
+        raise OutputMismatch((actual_output, actual_attn), (expected_output, expected_attn)) from exc
+    return actual_output, actual_attn
 
 
 def extract_case_input(trace: Any) -> str:
@@ -708,10 +725,10 @@ def test_sdpa_basic(user: dict[str, Any], ref: dict[str, Any]) -> None:
     q = torch.randn(batch, heads, q_len, d_k)
     k = torch.randn(batch, heads, kv_len, d_k)
     v = torch.randn(batch, heads, kv_len, d_v)
-    out, attn = require(user, "scaled_dot_product_attention")(q, k, v)
-    expected_out, expected_attn = ref["scaled_dot_product_attention"](q, k, v)
-    assert_close(out, expected_out)
-    assert_close(attn, expected_attn)
+    assert_sdpa_pair(
+        require(user, "scaled_dot_product_attention")(q, k, v),
+        ref["scaled_dot_product_attention"](q, k, v),
+    )
 
 
 def test_sdpa_mask(user: dict[str, Any], ref: dict[str, Any]) -> None:
@@ -722,10 +739,10 @@ def test_sdpa_mask(user: dict[str, Any], ref: dict[str, Any]) -> None:
     q, k, v = torch.randn(batch, heads, q_len, d_k), torch.randn(batch, heads, kv_len, d_k), torch.randn(batch, heads, kv_len, d_k)
     mask = torch.rand(batch, 1, q_len, kv_len) > 0.35
     mask[..., 0] = True
-    out, attn = require(user, "scaled_dot_product_attention")(q, k, v, mask)
-    expected_out, expected_attn = ref["scaled_dot_product_attention"](q, k, v, mask)
-    assert_close(out, expected_out)
-    assert_close(attn, expected_attn)
+    out, attn = assert_sdpa_pair(
+        require(user, "scaled_dot_product_attention")(q, k, v, mask),
+        ref["scaled_dot_product_attention"](q, k, v, mask),
+    )
     assert_close(attn.masked_select(~mask.expand_as(attn)), torch.zeros_like(attn.masked_select(~mask.expand_as(attn))))
 
 
@@ -1125,7 +1142,9 @@ def sample_sdpa(user: dict[str, Any], ref: dict[str, Any], index: int) -> None:
     else:
         q = k = v = fixed_tensor((1, 1, 3, 4))
         mask = torch.ones((1, 1, 3, 3), dtype=torch.bool); mask[..., 2] = False
-        _, attn = require(user, "scaled_dot_product_attention")(q, k, v, mask)
+        actual = require(user, "scaled_dot_product_attention")(q, k, v, mask)
+        expected = ref["scaled_dot_product_attention"](q, k, v, mask)
+        _, attn = assert_sdpa_pair(actual, expected)
         assert_close(attn[..., 2], torch.zeros_like(attn[..., 2]))
 
 

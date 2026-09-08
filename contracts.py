@@ -13,9 +13,9 @@ CONTRACTS: dict[str, Contract] = {
     ),
     "attention.sdpa": (
         "def scaled_dot_product_attention(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, mask: torch.Tensor | None = None) -> tuple[torch.Tensor, torch.Tensor]:\n    pass",
-        ("`batch`：批大小。", "`heads`：注意力头数。", "`query_len`：Query 序列长度。", "`key_len`：Key/Value 序列长度。", "`head_dim`：每个头的 Query/Key 维度。", "`value_dim`：每个头的 Value 维度。"),
-        ("`q: torch.Tensor`，形状 `(batch, heads, query_len, head_dim)`。", "`k: torch.Tensor`，形状 `(batch, heads, key_len, head_dim)`。", "`v: torch.Tensor`，形状 `(batch, heads, key_len, value_dim)`。", "`mask: torch.Tensor | None`，可广播到 `(batch, heads, query_len, key_len)`。"),
-        ("`output: torch.Tensor`，形状 `(batch, heads, query_len, value_dim)`。", "`attn: torch.Tensor`，形状 `(batch, heads, query_len, key_len)`。"),
+        ("`batch`：批大小。", "`heads`：注意力头数。", "`query_len`：Query 序列长度。", "`key_len`：Key/Value 序列长度。", "`head_dim`：每个头的 Query/Key 维度，`q` 与 `k` 必须一致。", "`value_dim`：每个头的 Value 维度，可以与 `head_dim` 不同。"),
+        ("`q: torch.Tensor`，形状 `(batch, heads, query_len, head_dim)`。", "`k: torch.Tensor`，形状 `(batch, heads, key_len, head_dim)`。", "`v: torch.Tensor`，形状 `(batch, heads, key_len, value_dim)`；`k` 和 `v` 的 `key_len` 必须一致。", "`mask: torch.Tensor | None`，必须是 `torch.bool`；形状可广播到 `(batch, heads, query_len, key_len)`。`True` 表示允许关注，`False` 表示屏蔽该 Query-Key 位置。"),
+        ("返回二元组 `(output, attn)`。`output: torch.Tensor` 的形状为 `(batch, heads, query_len, value_dim)`，是用注意力权重加权求和后的 Value。", "`attn: torch.Tensor` 的形状为 `(batch, heads, query_len, key_len)`，是沿 `key_len` 维 Softmax 后的概率权重；每行和为 1，mask 为 `False` 的位置权重必须为 0。"),
     ),
     "attention.causal_mask": (
         "def causal_mask(seq_len: int) -> torch.Tensor:\n    pass",
