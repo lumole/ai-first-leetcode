@@ -1076,6 +1076,23 @@ button {
   padding: 20px 28px 26px;
 }
 
+.testcase-error-panel {
+  padding: 20px 28px 26px;
+}
+
+.testcase-error-panel > pre {
+  max-height: 280px;
+  overflow: auto;
+  margin: 0;
+  border: 1px solid rgba(229, 92, 101, 0.5);
+  border-radius: 4px;
+  padding: 12px;
+  color: #e34850;
+  background: var(--code-background);
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
 .case-result-status {
   display: flex;
   align-items: baseline;
@@ -1648,6 +1665,10 @@ button {
   }
 
   .case-result-panel {
+    padding: 16px;
+  }
+
+  .testcase-error-panel {
     padding: 16px;
   }
 

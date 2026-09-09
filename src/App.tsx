@@ -845,7 +845,16 @@ export default function App() {
                   </div>
                 </div>
               )}
-              {testcaseView === 'result' && runResult?.cases.length && activeRunCaseResult && (
+              {testcaseView === 'result' && runResult?.error && runResult.cases.length === 0 && (
+                <div className="testcase-error-panel">
+                  <div className="case-result-status failed">
+                    <strong>运行错误</strong>
+                    <span>本次没有产生可比较的测试结果</span>
+                  </div>
+                  <pre>{runResult.error}</pre>
+                </div>
+              )}
+              {testcaseView === 'result' && runResult && runResult.cases.length > 0 && activeRunCaseResult && (
                 <div className="case-result-panel">
                   <div className={activeRunCaseResult.passed ? 'case-result-status passed' : 'case-result-status failed'}>
                     <strong>{activeRunCaseResult.passed ? '通过' : '未通过'}</strong>
