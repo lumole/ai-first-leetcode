@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Circle,
   Code2,
+  Copy,
   CornerDownRight,
   ListFilter,
   History,
@@ -1009,6 +1010,23 @@ function SubmissionHistory({
   onSelect: (id: string | null) => void
 }) {
   const selected = records.find((record) => record.id === selectedId)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    setCopied(false)
+  }, [selectedId])
+
+  const copyCode = async () => {
+    if (!selected) return
+    try {
+      await navigator.clipboard.writeText(selected.code)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    } catch {
+      setCopied(false)
+    }
+  }
+
   if (selected) {
     return (
       <div className="submission-detail">
@@ -1019,7 +1037,20 @@ function SubmissionHistory({
         </div>
         <div className="submission-meta">提交于 {new Date(selected.createdAt).toLocaleString('zh-CN')} · {selected.elapsedMs.toFixed(1)} ms</div>
         {selected.error && <pre className="error-box">{selected.error}</pre>}
-        <div className="submission-code"><small>代码 · Python</small><pre>{selected.code}</pre></div>
+        <div className="submission-code">
+          <small>代码 · Python</small>
+          <div className="submission-code-frame">
+            <button
+              className="copy-code-button"
+              onClick={copyCode}
+              title={copied ? '已复制' : '复制代码'}
+              aria-label={copied ? '已复制' : '复制代码'}
+            >
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+            </button>
+            <pre>{selected.code}</pre>
+          </div>
+        </div>
       </div>
     )
   }

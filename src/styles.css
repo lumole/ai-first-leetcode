@@ -1137,7 +1137,11 @@ button {
 .submission-state strong { font-size: 28px; }
 .submission-state span { color: var(--text-subtle); }
 .submission-code small { display: block; margin-bottom: 8px; color: var(--text-subtle); }
-.submission-code pre { max-height: 420px; overflow: auto; margin: 0; border: 1px solid var(--border); border-radius: 5px; padding: 14px; background: var(--code-background); white-space: pre; }
+.submission-code-frame { position: relative; overflow: hidden; border: 1px solid var(--border); border-radius: 5px; background: var(--code-background); }
+.submission-code-frame pre { max-height: 420px; overflow: auto; margin: 0; padding: 14px 52px 14px 14px; background: transparent; white-space: pre; }
+.copy-code-button { position: absolute; top: 8px; right: 8px; z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--border-control); border-radius: 5px; padding: 0; color: var(--text-muted); background: var(--surface); }
+.copy-code-button:hover { color: var(--text); background: var(--surface-hover); }
+.copy-code-button:focus-visible { outline: 2px solid var(--case-active); outline-offset: 2px; }
 
 .case-result-status.passed strong {
   color: var(--submit);
