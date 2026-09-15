@@ -62,8 +62,8 @@ CONTRACTS: dict[str, Contract] = {
     "transformer.rope": (
         "def build_rope_cache(seq_len: int, head_dim: int, base: int = 10000) -> tuple[torch.Tensor, torch.Tensor]:\n    pass\n\n\ndef apply_rope(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.Tensor:\n    pass",
         ("`batch`：批大小。", "`heads`：头数。", "`seq_len`：序列长度。", "`head_dim`：每个头维度，要求为偶数。"),
-        ("`build_rope_cache(seq_len, head_dim)`。", "`x: torch.Tensor`，形状 `(batch, heads, seq_len, head_dim)`。", "`cos`、`sin`，形状均为 `(seq_len, head_dim // 2)`。"),
-        ("`build_rope_cache` 返回 `(cos, sin)`。", "`apply_rope` 返回形状与 `x` 相同的 Tensor。"),
+        ("`build_rope_cache(seq_len, head_dim, base)`：`base` 为频率基数，默认 `10000`。", "`x: torch.Tensor`，形状 `(batch, heads, seq_len, head_dim)`。", "`cos`、`sin`：由缓存函数返回的余弦和正弦表，形状均为 `(seq_len, head_dim // 2)`；第 `[position, pair]` 个元素对应 `cos(position * base ** (-2 * pair / head_dim))` 和 `sin(position * base ** (-2 * pair / head_dim))`。"),
+        ("`build_rope_cache` 返回二元组 `(cos, sin)`，不是加到 `x` 上的位置向量。", "`apply_rope` 返回一个 Tensor，形状与 `x` 相同；对每个相邻维度对 `(2 * pair, 2 * pair + 1)` 按二维旋转公式计算。"),
     ),
     "transformer.residual": (
         "class ResidualSubLayer(nn.Module):\n    def __init__(self, model_dim: int, sublayer: nn.Module, dropout: float = 0.1) -> None:\n        pass\n\n    def forward(self, x: torch.Tensor, *args: torch.Tensor) -> torch.Tensor:\n        pass",

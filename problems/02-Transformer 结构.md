@@ -71,7 +71,53 @@ CodeKy：[3053. 旋转位置编码 RoPE](https://codeky.online/problem/3721)
 Deep-ML：[Rotary Positional Embeddings (RoPE)](https://www.deep-ml.com/problems/381)
 LeetGPU：[Rotary Positional Embedding](https://leetgpu.com/challenges/rotary-positional-embedding)
 
-RoPE 不是把位置编码加到输入上，而是直接旋转 Query 和 Key：把相邻两维看成一个二维平面，按位置 m 旋转一个角度 $m\theta$ 。旋转后两个向量的点积只和它们的相对位置差有关，于是注意力天然带上了相对位置信息，也能外推到更长序列。现代大模型大多用 RoPE 替代正弦位置编码。实现要点是预先算好每个位置每个频率的 cos、sin，再对偶数维和奇数维做旋转。
+RoPE 不是把位置向量加到输入上，而是对每个位置的 Query 和 Key 做旋转。设每个注意力头的维度为 $d_k$（必须是偶数），把相邻的两维 $(2i, 2i+1)$ 看成一个二维平面，其中 $i=0,1,\ldots,d_k/2-1$。
+
+### 旋转公式
+
+第 $i$ 个二维平面使用一个固定频率：
+
+$$
+\theta_i = \mathrm{base}^{-2i/d_k},\qquad \mathrm{base}=10000
+$$
+
+位置 $m$ 在这个平面上的旋转角度是：
+
+$$
+\phi_{m,i}=m\theta_i
+$$
+
+如果当前位置向量在这一对维度上的值是 $(x_{m,2i},x_{m,2i+1})$，旋转后的值就是二维旋转矩阵的结果：
+
+$$
+\begin{bmatrix}
+x'_{m,2i}\\
+x'_{m,2i+1}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\cos\phi_{m,i} & -\sin\phi_{m,i}\\
+\sin\phi_{m,i} & \phantom{-}\cos\phi_{m,i}
+\end{bmatrix}
+\begin{bmatrix}
+x_{m,2i}\\
+x_{m,2i+1}
+\end{bmatrix}
+$$
+
+展开后，每一对维度分别计算：
+
+$$
+x'_{m,2i}=x_{m,2i}\cos\phi_{m,i}-x_{m,2i+1}\sin\phi_{m,i}
+$$
+
+$$
+x'_{m,2i+1}=x_{m,2i}\sin\phi_{m,i}+x_{m,2i+1}\cos\phi_{m,i}
+$$
+
+例如，当某一对维度为 $(1,2)$，旋转角为 $\pi/2$ 时，旋转后为 $(-2,1)$。位置 $m=0$ 时角度为 0，所以所有维度保持不变。
+
+实现时，`build_rope_cache` 先为每个位置和每个二维平面保存 `cos(m * theta_i)` 与 `sin(m * theta_i)`：`cos`、`sin` 的形状都是 `(seq_len, head_dim // 2)`。`apply_rope` 再取出 `x[..., 0::2]` 和 `x[..., 1::2]`，按上面的两条公式计算，最后交错拼回原来的维度。对 Query 和 Key 分别应用同样的操作后，位置 $m$ 和位置 $n$ 的点积等价于使用相对旋转角 $(n-m)\theta_i$，这就是 RoPE 注入相对位置信息的原因。
 
 ```python
 import torch
